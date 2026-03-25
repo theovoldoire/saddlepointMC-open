@@ -16,10 +16,10 @@ dt2 = melt(dt, id.vars = "1")
 dt2$N = as.character(dt2$`1`)
 dt2$mode = "With tilting"
 dt2[variable == "2" | variable == "4", ]$mode= "Without tilting"
-dt2$sampling = "Normal"
+dt2$sampling = "Gaussian"
 dt2[variable == "2" | variable == "3"]$sampling = "Uniform"
 
-dt2$sampling = factor(dt2$sampling, c("Uniform", "Normal"))
+dt2$sampling = factor(dt2$sampling, c("Uniform", "Gaussian"))
 dt2$mode = factor(dt2$mode, c("Without tilting", "With tilting"))
 
 ggplot(dt2, aes(x = N, y = value, group=1)) + 
@@ -40,7 +40,8 @@ sparsity$Type = factor(ifelse(sparsity$Type == "X", "X close/far from Gaussian",
 
 ggplot(sparsity, aes(x = Asymetry, y = Sd, group=1)) + 
   scale_y_log10("Standard deviation of log-likelihood") + 
-  geom_point() + geom_line() + facet_grid(cols= vars(Type))
+  geom_point() + geom_line() + facet_grid(cols= vars(Type)) +
+  xlab("Asymmetry")
 
 ggsave("docs/figures/sparsity.pdf", height = 8, width=12, units="cm")
 
@@ -63,11 +64,13 @@ dt = read_csv("data/for_figures/comparison_gaussian.csv")
 dt2 = dcast(as.data.table(dt), vote_t1 + model + vote_t2 ~ confidence, value.var = "value") |> as.data.frame()
 dt2 = dt2[!dt2$vote_t1 %in% c("Royal (left)", "Sarkozy (right)"),]
 
+dt2$vote_t2[dt2$vote_t2 == "Other"] = "Abstention"
+
 ggplot(dt2[dt2$model == "True model",], aes(x = `0.5`, xmin = `0.05`, xmax = `0.95`, y = vote_t2)) + 
   facet_grid(rows= vars(vote_t1), scales = "free", switch="both") + 
   geom_errorbar(width=.7) +  
-  geom_errorbar(data = dt2[dt2$model != "True model",], aes(x = `0.5`, xmin = `0.5`, xmax = `0.5`, y = vote_t2), col ="red", width=.7) + 
-  scale_y_discrete("", position="right") + scale_x_continuous("Posterior") +  theme(
+  geom_errorbar(data = dt2[dt2$model != "True model",], aes(x = `0.5`, xmin = `0.05`, xmax = `0.95`, y = vote_t2), col ="red", width=.7) + 
+  scale_y_discrete("", position="right") + scale_x_continuous("Posterior", limits = c(0, 1)) +  theme(
   strip.text = element_text(size = 5),
   axis.text.y = element_text(size= 6)
 )
@@ -173,7 +176,7 @@ ggsave("docs/figures/borne_ruffin.pdf",  height = 15, width = 12, units = "cm")
 #### Figure 9 A ####
 
 dt = read_csv("data/for_figures/outcomes_all_constituencies.csv") |> as.data.table()
-dt$wins = if_else(dt$situation%in%c(1,2), "Left first (center-to-left)", "Center first (left-to-center)")
+dt$wins = if_else(dt$situation%in%c(1,2), "Left ahead, center-to-left", "Center ahead, left-to-center")
 dt$remains = if_else(dt$situation%in%c(1,3), "Weakest leaves", "Weakest remains")
 dt2 = dt[,.(m = mean(prob), qmin = mean(prob)-2*sd(prob), qmax = mean(prob)+2*sd(prob), std=sd(prob)),.(wins, remains)]
 ggplot(dt) + geom_histogram(aes(x = prob), col="black",fill="white") + facet_grid(rows=vars(wins), cols=vars(remains)) + 
